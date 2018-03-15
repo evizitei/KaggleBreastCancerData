@@ -1,0 +1,27 @@
+---
+title: "Breast Cancer Prediction"
+output: html_notebook
+---
+
+Let's start by pulling in the breast cancer dataset,
+which is already tabular with labels.
+
+```{r}
+data <- read.csv("./data/data.csv", stringsAsFactors=FALSE)
+data$X <- NULL
+data$diagnosis <- factor(ifelse(data$diagnosis=="B", "Benign","Malignant"))
+head(data)
+```
+
+This dataset has a lot of variables, some of which are
+very likely to be representing the same variance.
+We can use the PerformanceAnalytics package to quickly get
+a feel for which variables are correlated.
+
+```{r}
+library(PerformanceAnalytics)
+chart.Correlation(data[,c(3:11)], pch=1, histogram=TRUE, main="Cancer Correlations")
+```
+
+Most of these samples must be rather circular, since perimiter and
+radius and area are all very closely correlated.
