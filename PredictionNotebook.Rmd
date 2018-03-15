@@ -25,3 +25,42 @@ chart.Correlation(data[,c(3:11)], pch=1, histogram=TRUE, main="Cancer Correlatio
 
 Most of these samples must be rather circular, since perimiter and
 radius and area are all very closely correlated.
+
+Let's try applying PCA and see how many axis of variation we can
+reasonably reduce this dataset to and still maintain predictive value:
+
+```{r}
+data_prcomp = prcomp(transform(data)[,c(3:11)], scale=TRUE)
+summary(data_prcomp)
+screeplot(data_prcomp, npcs=10, type="lines")
+```
+
+And now we can try to combine this with the labels in a single frame
+
+```{r}
+pca_data = data_prcomp$x #[,1:3] # first 3 components
+pca_df = data.frame(pca_data[,1:3])
+pca_df$diagnosis <- data$diagnosis
+```
+
+And with that in place we can try applying an off-the-shelf method
+for learning a model:
+
+```{r}
+library(rpart)
+library(ada)
+library(caret)
+
+nrows <- NROW(pca_df)
+set.seed(242)
+index <- sample(1:nrows, 0.7 * nrows)	## shuffle and divide
+
+train <- pca_df[index,]			## 398 test data (70%)
+test <- pca_df[-index,]  		        ## 171 test data (30%)
+
+control <- rpart.control(cp=-1,maxdepth=14, maxcompete = 1)
+model <- ada(diagnosis~., data=train, test.x=train[,1:3], test.y=train[,4], type="gentle", control=control, iter=100)
+pre_ada <- predict(model, test[1:3])
+cm_ada <- confusionMatrix(pre_ada, test$diagnosis)
+fourfoldplot(cm_ada$table, conf.level = 0, margin = 1, main=paste("AdaBoost (",round(cm_ada$overall[1]*100),"%)",sep=""))
+```
